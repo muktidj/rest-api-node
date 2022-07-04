@@ -4,6 +4,7 @@ const path = require('path');
 const { validationResult } = require('express-validator');
 
 const Post = require('../models/post');
+const User = require('../models/user')
 
 exports.getPosts = (req, res, next) => {
   const currentPage = req.query.page || 1;
@@ -50,18 +51,28 @@ exports.createPost = (req, res, next) => {
   const imageUrl = req.file.path
   const title = req.body.title;
   const content = req.body.content;
+  let creator;
   const post = new Post({
     title: title,
     content: content,
     imageUrl: imageUrl,
-    creator: { name: 'Mukti' }
+    creator: req.userId
   });
   post
     .save()
     .then(result => {
+      return User.findById(req.userId);
+    })
+    .then(user => {
+      creator = user;
+      user.posts.push(post);
+      return user.save();
+    })
+    .then(result => {
       res.status(201).json({
         message: 'Post created successfully!',
-        post: result
+        post: post,
+        creator: { _id: creator._id, name: creator.name}
       });
     })
     .catch(err => {
@@ -117,6 +128,11 @@ exports.updatePost = (req, res, next) => {
         error.statusCode = 404;
         throw error;
       }
+      if (post.creator.toString() !== req.userId) {
+        const error = new Error('Not Authorized');
+        error.statusCode = 403;
+        throw error;
+      }
       if (imageUrl !== post.imageUrl) {
         clearImage(post.imageUrl);
       }
@@ -144,6 +160,11 @@ exports.deletePost = (req, res, next) => {
     if(!post) {
       const error = new Error('Could not find post.');
       error.statusCode = 404;
+      throw error;
+    }
+    if (post.creator.toString() !== req.userId) {
+      const error = new Error('Not Authorized');
+      error.statusCode = 403;
       throw error;
     }
     // Check Logged in User
