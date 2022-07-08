@@ -75,3 +75,22 @@ exports.login = (req, res, next) => {
         })
 
 }
+
+exports.getUserStatus = (req, res, next) => {
+    User.findById(req.userId)
+    .then(user => {
+        if (!user) {
+            const error = new Error('Wrong Password');
+            error.statusCode = 401;
+            throw error;
+        }
+        res.status(200).json({status: user.status})
+    })
+    .catch(err => {
+        if (!err.statusCode) {
+            err.statusCode = 501;
+          }
+          next(err);
+    })
+}
+
