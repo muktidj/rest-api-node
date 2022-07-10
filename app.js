@@ -10,6 +10,7 @@ const multer = require('multer')
 //Rotes
 const feedRoutes = require('./routes/feed');
 const authRoutes = require('./routes/auth');
+const { Socket } = require('dgram');
 
 
 const app = express();
@@ -71,6 +72,10 @@ mongoose
     'mongodb+srv://mukti:mukti@cluster0.euhil4c.mongodb.net/messages?retryWrites=true&w=majority'
   )
   .then(result => {
-    app.listen(8080);
+    const server = app.listen(8080);
+    const io = require('./socket').init(server)
+    io.on('connection', socket => {
+      console.log('Client Connected')
+    })
   })
   .catch(err => console.log(err));
